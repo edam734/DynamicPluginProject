@@ -44,6 +44,7 @@ target/
 *.jar
 *.war
 *.ear
+!DynamicPluginLoader/plugins/*.jar
 
 # Logs
 *.log
