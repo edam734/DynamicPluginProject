@@ -1,4 +1,4 @@
-package com.edam.dynamicloader;
+package com.edam.dynamicpluginloader.plugin;
 
 import java.io.IOException;
 import java.nio.file.Files;
