@@ -31,8 +31,11 @@ public class DynamicPluginLoaderApplication {
         for (LoadedPlugin loadedPlugin : plugins) {
             System.out.printf("%n-------------%n%n");
             try {
-                loadedPlugin.plugin().execute();
-                System.out.println(">> " + loadedPlugin.plugin().getName() + " executed with Success!");
+                try (loadedPlugin) {
+                    loadedPlugin.plugin().execute();
+                    System.out.println(
+                            ">> " + loadedPlugin.plugin().getName() + " executed with Success!");
+                }
             } catch (RuntimeException e) {
                 System.err.println("Plugin execution failed: " +
                         loadedPlugin.plugin().getName() +
