@@ -27,6 +27,18 @@ public class DynamicPluginLoaderApplication {
                 .flatMap(Optional::stream)
                 .toList();
 
-        plugins.forEach(loadedPlugin -> System.out.println(loadedPlugin.plugin().getName()));
+        // let's execute
+        for (LoadedPlugin loadedPlugin : plugins) {
+            System.out.printf("%n-------------%n%n");
+            try {
+                loadedPlugin.plugin().execute();
+                System.out.println(">> " + loadedPlugin.plugin().getName() + " executed with Success!");
+            } catch (RuntimeException e) {
+                System.err.println("Plugin execution failed: " +
+                        loadedPlugin.plugin().getName() +
+                        " - " +
+                        e.getMessage());
+            }
+        }
     }
 }
