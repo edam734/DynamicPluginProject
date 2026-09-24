@@ -63,27 +63,24 @@ public enum PluginLoader {
     }
 
     private boolean verifyPlugin(Class<?> clazz) {
-        if (Plugin.class.isAssignableFrom(clazz)) {
-            return isInstantiable(clazz);
-        }
-        return false;
+        return Plugin.class.isAssignableFrom(clazz) && isInstantiable(clazz);
     }
 
+    // do Basic type validations
+    // 2. Checks if the class is abstract
+    // Attempts to get the empty constructor (without parameters)
+    // Ensures that the constructor is indeed public
     private boolean isInstantiable(Class<?> clazz) {
-        // 1. Basic type validations
         if (clazz.isInterface() || clazz.isEnum() || clazz.isAnnotation()) {
             return false;
         }
-        // 2. Checks if the class is abstract
         int modifier = clazz.getModifiers();
         if (Modifier.isAbstract(modifier)) {
             return false;
         }
-
         try {
-            // Attempts to get the empty constructor (without parameters)
+
             Constructor<?> constructor = clazz.getConstructor();
-            // Ensures that the constructor is indeed public
             return Modifier.isPublic(constructor.getModifiers());
         } catch (NoSuchMethodException e) {
             return false;
