@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.zip.ZipException;
 
 public enum PluginLoader {
     INSTANCE;
@@ -40,7 +41,7 @@ public enum PluginLoader {
             Manifest manifest = jar.getManifest();
             String pluginClassName = manifest.getMainAttributes().getValue("Plugin-Class");
             if (null == pluginClassName) {
-                return Optional.empty();
+                System.err.println("Field 'Plugin-Class' doesn't have a valid path to class Plugin: " + jarPath.getFileName());
             } else {
                 URL jarUrl = jarPath.toUri().toURL();
                 URLClassLoader classLoader = new URLClassLoader(new URL[]{jarUrl},
@@ -53,9 +54,14 @@ public enum PluginLoader {
                     LoadedPlugin loadedPlugin = new LoadedPlugin(plugin, classLoader);
                     return Optional.of(loadedPlugin);
                 }
-                return Optional.empty();
+                System.err.println("Ignoring invalid plugin: " + jarPath.getFileName());
             }
+            return Optional.empty();
         } catch (ClassNotFoundException e) {
+            System.err.println("Class Plugin doesn't exist: " + jarPath.getFileName());
+            return Optional.empty();
+        } catch (ZipException e) {
+            System.err.println("Invalid JAR: " + jarPath.getFileName());
             return Optional.empty();
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Could not instantiate plugin", e);
