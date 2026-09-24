@@ -72,8 +72,8 @@ public enum PluginLoader {
         return Plugin.class.isAssignableFrom(clazz) && isInstantiable(clazz);
     }
 
-    // do Basic type validations
-    // 2. Checks if the class is abstract
+    // Do Basic type validations
+    // Checks if the class is abstract
     // Attempts to get the empty constructor (without parameters)
     // Ensures that the constructor is indeed public
     private boolean isInstantiable(Class<?> clazz) {
@@ -85,7 +85,6 @@ public enum PluginLoader {
             return false;
         }
         try {
-
             Constructor<?> constructor = clazz.getConstructor();
             return Modifier.isPublic(constructor.getModifiers());
         } catch (NoSuchMethodException e) {
