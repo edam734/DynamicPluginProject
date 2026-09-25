@@ -193,16 +193,9 @@ To achieve this, different tasks can run through an `ExecutorService`:
 These tasks essentially act as **event producers**. When they detect something, they place an event into a `BlockingQueue`, which acts as a thread-safe communication channel between the different threads.
 
 ```text
-PluginWatcher ───────┐
-                     │
-                     ▼
-               BlockingQueue
-                     │
-                     ▼
-               Event handler
-                     ▲
-                     │
-CommandListener ─────┘
+PluginWatcher ─── PluginAddedEvent ──┐
+                                     ├──► BlockingQueue ───► Event Handler
+CommandListener ── CommandEvent ─────┘
 ```
 
 The thread consuming the `BlockingQueue` can block on:
