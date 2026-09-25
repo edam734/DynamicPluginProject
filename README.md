@@ -179,3 +179,49 @@ This will likely be implemented using Java's file-system monitoring facilities, 
 Further improvements may include safer plugin lifecycle management, plugin unloading/reloading, and verification of trusted plugin JARs.
 
 <br>
+
+# Fase 2
+## Event-driven application lifecycle
+
+The application has a continuous lifecycle, waiting for different types of events instead of executing only a short sequence in `main`.
+
+To achieve this, different tasks can run through an `ExecutorService`:
+
+* `PluginWatcher` — monitors the plugins directory using `WatchService`.
+* `CommandListener` — waits for user commands.
+
+These tasks essentially act as **event producers**. When they detect something, they place an event into a `BlockingQueue`, which acts as a thread-safe communication channel between the different threads.
+
+```text
+PluginWatcher ───────┐
+                     │
+                     ▼
+               BlockingQueue
+                     │
+                     ▼
+               Event handler
+                     ▲
+                     │
+CommandListener ─────┘
+```
+
+The thread consuming the `BlockingQueue` can block on:
+
+```java
+eventQueue.take();
+```
+
+While there are no events, the thread waits without unnecessarily consuming CPU. When an event arrives, it is processed and the application goes back to waiting for the next one.
+
+Threads responsible for detecting events should do as little work as possible so that they can quickly return to their listening role.
+
+With `WatchService`, even if a second JAR is placed in the directory while `PluginWatcher` is publishing the first event to the `BlockingQueue`, `WatchService` keeps the new events pending so they can be processed afterwards.
+
+There are, however, two cases to keep in mind:
+
+* `OVERFLOW`: if too many changes occur within a short period of time, `WatchService` may no longer be able to report every event precisely. In that case, the application should rescan the directory contents.
+* A creation event may be triggered while a JAR is still being copied. Before loading the plugin, it is advisable to make sure that the file is fully available.
+
+This architecture separates **event detection**, **inter-thread communication**, and **processing**, allowing the application to remain active and continuously react to new commands and changes in the plugins directory.
+
+<br>
