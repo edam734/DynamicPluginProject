@@ -1,5 +1,7 @@
 package com.edam.dynamicpluginloader;
 
+import com.edam.dynamicpluginloader.handler.EventHandler;
+import com.edam.dynamicpluginloader.plugin.PluginRegistry;
 import com.edam.dynamicpluginloader.watcher.PluginWatcher;
 import com.edam.dynamicpluginloader.watcher.event.AppEvent;
 
@@ -17,9 +19,11 @@ public class Test {
         try (ExecutorService executorService = Executors.newSingleThreadExecutor()) {
             executorService.submit(pluginWatcher);
 
+            PluginRegistry pluginRegistry = new PluginRegistry();
+            EventHandler eventHandler = new EventHandler(pluginRegistry);
             while (true) {
                 AppEvent event = eventQueue.take();
-                System.out.println(event);
+                eventHandler.handle(event);
             }
         }
     }
