@@ -1,7 +1,6 @@
 package com.edam.dynamicpluginloader.watcher;
 
 import com.edam.dynamicpluginloader.watcher.event.AppEvent;
-import com.edam.dynamicpluginloader.watcher.event.EventType;
 import com.edam.dynamicpluginloader.watcher.event.PluginEvent;
 import com.edam.dynamicpluginloader.watcher.event.PluginEventKind;
 
