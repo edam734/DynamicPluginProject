@@ -23,4 +23,8 @@ public class PluginRegistry {
     public Collection<LoadedPlugin> getAll() {
         return loadedPlugins.values();
     }
+
+    public int size() {
+        return this.loadedPlugins.size();
+    }
 }

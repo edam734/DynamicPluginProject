@@ -5,10 +5,7 @@ import com.edam.dynamicpluginloader.plugin.PluginRegistry;
 import com.edam.dynamicpluginloader.watcher.PluginWatcher;
 import com.edam.dynamicpluginloader.watcher.event.AppEvent;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 
 public class Test {
 
@@ -19,8 +16,9 @@ public class Test {
         try (ExecutorService executorService = Executors.newSingleThreadExecutor()) {
             executorService.submit(pluginWatcher);
 
+            ScheduledExecutorService retryExecutor = Executors.newSingleThreadScheduledExecutor();
             PluginRegistry pluginRegistry = new PluginRegistry();
-            EventHandler eventHandler = new EventHandler(pluginRegistry);
+            EventHandler eventHandler = new EventHandler(retryExecutor, pluginRegistry);
             while (true) {
                 AppEvent event = eventQueue.take();
                 eventHandler.handle(event);
