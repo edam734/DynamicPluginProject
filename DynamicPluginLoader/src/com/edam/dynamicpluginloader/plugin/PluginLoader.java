@@ -19,7 +19,7 @@ import java.util.zip.ZipException;
 public enum PluginLoader {
     INSTANCE;
 
-    private static final long SIZE_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 Mb
+    private static final long SIZE_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 MiB
 
     public Optional<LoadedPlugin> loadUnchecked(Path jarPath) {
         try {
