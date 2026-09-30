@@ -1,5 +1,6 @@
 package com.edam.dynamicpluginloader.plugin;
 
+import com.edam.dynamicpluginloader.util.FileHasher;
 import com.edam.pluginapi.Plugin;
 
 import java.io.IOException;
@@ -8,6 +9,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.jar.JarFile;
@@ -16,6 +18,8 @@ import java.util.zip.ZipException;
 
 public enum PluginLoader {
     INSTANCE;
+
+    private static final long SIZE_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 Mb
 
     public Optional<LoadedPlugin> loadUnchecked(Path jarPath) {
         try {
@@ -41,7 +45,9 @@ public enum PluginLoader {
             Manifest manifest = jar.getManifest();
             String pluginClassName = manifest.getMainAttributes().getValue("Plugin-Class");
             if (null == pluginClassName) {
-                System.err.println("Field 'Plugin-Class' doesn't have a valid path to class Plugin: " + jarPath.getFileName());
+                System.err.println(
+                        "Field 'Plugin-Class' doesn't have a valid path to class Plugin: " +
+                                jarPath.getFileName());
             } else {
                 URL jarUrl = jarPath.toUri().toURL();
                 URLClassLoader classLoader = new URLClassLoader(new URL[]{jarUrl},
@@ -51,7 +57,8 @@ public enum PluginLoader {
                     Plugin plugin = pluginClass.asSubclass(Plugin.class)
                             .getConstructor()
                             .newInstance();
-                    LoadedPlugin loadedPlugin = new LoadedPlugin(plugin, classLoader);
+                    String hash = calculateHash(jarPath);
+                    LoadedPlugin loadedPlugin = new LoadedPlugin(plugin, classLoader, hash);
                     return Optional.of(loadedPlugin);
                 }
                 System.err.println("Ignoring invalid plugin: " + jarPath.getFileName());
@@ -89,6 +96,15 @@ public enum PluginLoader {
             return Modifier.isPublic(constructor.getModifiers());
         } catch (NoSuchMethodException e) {
             return false;
+        }
+    }
+
+    private String calculateHash(Path jarPath) throws IOException {
+        long fileSize = Files.size(jarPath);
+        if (fileSize < SIZE_THRESHOLD_BYTES) {
+            return FileHasher.hashSmallFile(jarPath);
+        } else {
+            return FileHasher.hashBigFile(jarPath);
         }
     }
 }

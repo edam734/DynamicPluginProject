@@ -12,7 +12,8 @@ import java.net.URLClassLoader;
  * The class loader must remain open while the plugin is in use because
  * additional classes or resources from the plugin JAR may be loaded lazily.
  */
-public record LoadedPlugin(Plugin plugin, URLClassLoader classLoader) implements Closeable {
+public record LoadedPlugin(Plugin plugin, URLClassLoader classLoader, String hash) implements
+        Closeable {
     @Override
     public void close() throws IOException {
         classLoader.close();
