@@ -11,8 +11,18 @@ import java.util.HexFormat;
 public final class FileHasher {
 
     private static final String HASH_ALGORITHM = "SHA-256";
+    private static final long SIZE_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 MiB
 
-    public static String hashSmallFile(Path jarPath) throws IOException {
+    public static String calculateHash(Path jarPath) throws IOException {
+        long fileSize = Files.size(jarPath);
+        if (fileSize < SIZE_THRESHOLD_BYTES) {
+            return FileHasher.hashSmallFile(jarPath);
+        } else {
+            return FileHasher.hashBigFile(jarPath);
+        }
+    }
+
+    private static String hashSmallFile(Path jarPath) throws IOException {
         try {
             byte[] bytes = Files.readAllBytes(jarPath);
             MessageDigest digest = MessageDigest.getInstance(HASH_ALGORITHM);
@@ -23,7 +33,7 @@ public final class FileHasher {
         }
     }
 
-    public static String hashBigFile(Path jarPath) throws IOException {
+    private static String hashBigFile(Path jarPath) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance(HASH_ALGORITHM);
             try (BufferedInputStream buffered = new BufferedInputStream(

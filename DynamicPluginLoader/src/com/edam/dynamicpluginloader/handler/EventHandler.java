@@ -3,10 +3,12 @@ package com.edam.dynamicpluginloader.handler;
 import com.edam.dynamicpluginloader.plugin.LoadedPlugin;
 import com.edam.dynamicpluginloader.plugin.PluginLoader;
 import com.edam.dynamicpluginloader.plugin.PluginRegistry;
+import com.edam.dynamicpluginloader.util.FileHasher;
 import com.edam.dynamicpluginloader.watcher.event.AppEvent;
 import com.edam.dynamicpluginloader.watcher.event.CommandEvent;
 import com.edam.dynamicpluginloader.watcher.event.PluginEvent;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,19 +31,20 @@ public class EventHandler {
         this.pluginRegistry = pluginRegistry;
     }
 
-    public void handle(AppEvent event) {
+    public void handle(AppEvent event) throws IOException {
         switch (event.getType()) {
             case PLUGIN -> handlePluginEvent((PluginEvent) event);
             case USER_INPUT -> handleUserInput((CommandEvent) event);
         }
     }
 
-    private void handlePluginEvent(PluginEvent event) {
+    private void handlePluginEvent(PluginEvent event) throws IOException {
+        Path jarPath = Paths.get("plugins/" + event.path().toString());
+
         switch (event.kind()) {
             case CREATED -> {
-                Path jarPath = Paths.get("plugins/" + event.path().toString());
                 try {
-                    load(jarPath);
+                    load(jarPath, () -> cancelTaskRetry(jarPath));
                 } catch (UncheckedIOException e) {
                     System.err.println("JAR file not yet available. Try again...");
                     ScheduledFuture<?> loadDelayScheduled = retryExecutor.scheduleWithFixedDelay(
@@ -49,10 +52,17 @@ public class EventHandler {
                     retryTasks.put(jarPath, loadDelayScheduled);
                 }
             }
-/*            case MODIFIED -> {
-                // TODO
+            case MODIFIED -> {
+                LoadedPlugin plugin = pluginRegistry.get(jarPath);
+
+                if (plugin != null) {
+                    String hash = FileHasher.calculateHash(jarPath);
+                    if (plugin.hash() != null && !plugin.hash().equals(hash)) {
+                        load(jarPath);
+                    }
+                }
             }
-            case DELETED -> {
+/*            case DELETED -> {
                 // TODO
             }
             case OVERFLOW -> {
@@ -62,14 +72,24 @@ public class EventHandler {
     }
 
     private void load(Path jarPath) {
+        load(jarPath, () -> {
+        });
+    }
+
+    private void load(Path jarPath, Runnable onSuccess) {
         Optional<LoadedPlugin> loadedPlugin = PluginLoader.INSTANCE.loadUnchecked(jarPath);
         loadedPlugin.ifPresent(plugin -> {
             pluginRegistry.add(jarPath, plugin);
-            ScheduledFuture<?> future = retryTasks.remove(jarPath);
-            if (null != future) {
-                future.cancel(false);
-            }
+            onSuccess.run();
         });
+    }
+
+    private void cancelTaskRetry(Path jarPath) {
+        ScheduledFuture<?> future = retryTasks.remove(jarPath);
+
+        if (null != future) {
+            future.cancel(false);
+        }
     }
 
     private void retryLoad(Path jarPath) {

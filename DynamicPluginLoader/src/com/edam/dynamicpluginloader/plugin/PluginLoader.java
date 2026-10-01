@@ -9,7 +9,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.jar.JarFile;
@@ -18,8 +17,6 @@ import java.util.zip.ZipException;
 
 public enum PluginLoader {
     INSTANCE;
-
-    private static final long SIZE_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 MiB
 
     public Optional<LoadedPlugin> loadUnchecked(Path jarPath) {
         try {
@@ -57,7 +54,7 @@ public enum PluginLoader {
                     Plugin plugin = pluginClass.asSubclass(Plugin.class)
                             .getConstructor()
                             .newInstance();
-                    String hash = calculateHash(jarPath);
+                    String hash = FileHasher.calculateHash(jarPath);
                     LoadedPlugin loadedPlugin = new LoadedPlugin(plugin, classLoader, hash);
                     return Optional.of(loadedPlugin);
                 }
@@ -96,15 +93,6 @@ public enum PluginLoader {
             return Modifier.isPublic(constructor.getModifiers());
         } catch (NoSuchMethodException e) {
             return false;
-        }
-    }
-
-    private String calculateHash(Path jarPath) throws IOException {
-        long fileSize = Files.size(jarPath);
-        if (fileSize < SIZE_THRESHOLD_BYTES) {
-            return FileHasher.hashSmallFile(jarPath);
-        } else {
-            return FileHasher.hashBigFile(jarPath);
         }
     }
 }

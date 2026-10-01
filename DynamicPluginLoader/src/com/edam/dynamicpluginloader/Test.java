@@ -5,6 +5,7 @@ import com.edam.dynamicpluginloader.plugin.PluginRegistry;
 import com.edam.dynamicpluginloader.watcher.PluginWatcher;
 import com.edam.dynamicpluginloader.watcher.event.AppEvent;
 
+import java.io.IOException;
 import java.util.concurrent.*;
 
 public class Test {
@@ -23,6 +24,8 @@ public class Test {
                 AppEvent event = eventQueue.take();
                 eventHandler.handle(event);
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
