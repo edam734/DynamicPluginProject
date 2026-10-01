@@ -28,24 +28,41 @@ public class PluginManager {
         this.retryTasks = new ConcurrentHashMap<>();
     }
 
-    public void addPlugin(Path jarPath) {
+    public void addPlugin(Path origin) {
+        pluginExecutor.submit(() -> doAddPlugin(origin));
+    }
+
+    private void doAddPlugin(Path origin) {
         try {
-            load(jarPath);
-        } catch (UncheckedIOException e) {
+            copyAndLoad(origin);
+        } catch (UncheckedIOException | IOException e) {
             System.err.println("JAR file not yet available. Try again...");
-            ScheduledFuture<?> loadDelayScheduled = retryExecutor.scheduleWithFixedDelay(
-                    () -> retryLoad(jarPath), 500, 500, TimeUnit.MILLISECONDS);
-            retryTasks.put(jarPath, loadDelayScheduled);
+            ScheduledFuture<?> loadDelayTask = retryExecutor.scheduleWithFixedDelay(
+                    () -> retryCopyAndLoad(origin), 500, 500, TimeUnit.MILLISECONDS);
+            retryTasks.put(origin, loadDelayTask);
         }
     }
 
-    public void updatePlugin(Path jarPath) throws IOException {
+    public void updatePlugin(Path jarPath) {
+        pluginExecutor.submit(() -> {
+            try {
+                doUpdatePlugin(jarPath);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void doUpdatePlugin(Path jarPath) {
         LoadedPlugin plugin = pluginRegistry.get(jarPath);
 
         if (plugin != null) {
-            String hash = FileHasher.calculateHash(jarPath);
-            if (plugin.hash() != null && !plugin.hash().equals(hash)) {
-                load(jarPath);
+            try {
+                String hash = FileHasher.calculateHash(jarPath);
+                copyAndLoadIfModified(jarPath, plugin.hash(), hash);
+            } catch (IOException e) {
+                System.err.println("Modified JAR file not yet available. Try again...");
+                scheduleCalculateHashRetry(jarPath, plugin.hash());
             }
         }
     }
@@ -57,31 +74,69 @@ public class PluginManager {
         }
     }
 
-    private void load(Path jarPath) {
-        load(jarPath, () -> {
+    private void copyAndLoad(Path origin) throws IOException {
+        copyAndLoad(origin, () -> {
         });
     }
 
-    private void load(Path jarPath, Runnable onSuccess) {
-        Optional<LoadedPlugin> loadedPlugin = PluginLoader.INSTANCE.loadUnchecked(jarPath);
+    private void copyAndLoad(Path origin, Runnable onSuccess) {
+        try {
+            pluginRegistry.remove(origin);
+
+            Path cachedPath = pluginCache.copy(origin);
+            load(origin, cachedPath, onSuccess);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not copy plugin to cache", e);
+        }
+    }
+
+    private void load(Path origin, Path target, Runnable onSuccess) {
+        Optional<LoadedPlugin> loadedPlugin = PluginLoader.INSTANCE.loadUnchecked(target);
         loadedPlugin.ifPresent(plugin -> {
-            pluginRegistry.add(jarPath, plugin);
+            pluginRegistry.add(origin, plugin);
             onSuccess.run();
         });
     }
 
-    private void cancelTaskRetry(Path jarPath) {
-        ScheduledFuture<?> future = retryTasks.remove(jarPath);
+    private void cancelRetryTask(Path origin) {
+        ScheduledFuture<?> future = retryTasks.remove(origin);
         if (null != future) {
             future.cancel(false);
         }
     }
 
-    private void retryLoad(Path jarPath) {
+    private void retryCopyAndLoad(Path origin) {
         try {
-            System.out.println("dentro do retry.");
-            load(Paths.get(jarPath.toString()), () -> cancelTaskRetry(jarPath));
+            copyAndLoad(Paths.get(origin.toString()), () -> cancelRetryTask(origin));
         } catch (UncheckedIOException e) {
+            // Retry on next scheduled execution.
+        }
+    }
+
+    private void copyAndLoadIfModified(Path jarPath, String oldHash, String newHash) throws
+            IOException {
+        copyAndLoadIfModified(jarPath, oldHash, newHash, () -> {
+        });
+    }
+
+    private void copyAndLoadIfModified(Path jarPath, String oldHash, String newHash,
+                                       Runnable onSuccess) throws IOException {
+        if (oldHash != null && !oldHash.equals(newHash)) {
+            copyAndLoad(jarPath, onSuccess);
+        }
+    }
+
+    private void scheduleCalculateHashRetry(Path origin, String oldHash) {
+        ScheduledFuture<?> hashRetryTask = retryExecutor.scheduleWithFixedDelay(
+                () -> retryCalculateHash(origin, oldHash), 500, 500, TimeUnit.MILLISECONDS);
+        retryTasks.put(origin, hashRetryTask);
+    }
+
+    private void retryCalculateHash(Path origin, String oldHash) {
+        try {
+            String newHash = FileHasher.calculateHash(origin);
+            copyAndLoadIfModified(origin, oldHash, newHash, () -> cancelRetryTask(origin));
+        } catch (IOException e) {
             // Retry on next scheduled execution.
         }
     }

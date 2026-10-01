@@ -1,8 +1,6 @@
 package com.edam.dynamicpluginloader.plugin;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -21,9 +19,11 @@ public class PluginCache {
         }
     }
 
-    public void copy(Path origin) throws IOException {
-        InputStream inputStream = new BufferedInputStream(Files.newInputStream(origin));
-        Files.copy(inputStream, cachePath.resolve(origin.getFileName()),
-                StandardCopyOption.REPLACE_EXISTING);
+    public Path copy(Path origin) throws IOException {
+        Path target = cachePath.resolve(origin.getFileName());
+        System.out.println("COPY START");
+        Files.copy(origin, target, StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("COPY END");
+        return target;
     }
 }
