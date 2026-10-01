@@ -30,14 +30,8 @@ public class EventHandler {
         Path jarPath = Paths.get("plugins/" + event.path().toString());
 
         switch (event.kind()) {
-            case CREATED -> {
-                pluginManager.addPlugin(jarPath);
-                System.out.println("avançou no CREATED");
-            }
-            case MODIFIED -> {
-                pluginManager.updatePlugin(jarPath);
-                System.out.println("avançou no MODIFIED");
-            }
+            case CREATED -> pluginManager.addPlugin(jarPath);
+            case MODIFIED -> pluginManager.updatePlugin(jarPath);
             case DELETED -> pluginManager.removePlugin(jarPath);
 /*            case OVERFLOW -> {
                 // TODO

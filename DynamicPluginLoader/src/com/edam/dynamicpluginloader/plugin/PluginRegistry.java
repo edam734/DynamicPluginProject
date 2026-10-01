@@ -1,6 +1,7 @@
 package com.edam.dynamicpluginloader.plugin;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,13 +54,17 @@ public class PluginRegistry {
         LoadedPlugin plugin = loadedPlugins.remove(jarName);
 
         if (plugin != null) {
-            try {
-                plugin.close();
-            } catch (IOException e) {
-                System.err.println("Could not close plugin: " + e.getMessage());
-            }
+            close(plugin);
         }
         return plugin;
+    }
+
+    private void close(LoadedPlugin plugin) {
+        try {
+            plugin.close();
+        } catch (IOException e) {
+            System.err.println("Could not close plugin: " + e.getMessage());
+        }
     }
 
     /**
@@ -75,6 +80,14 @@ public class PluginRegistry {
         return Collections.unmodifiableCollection(loadedPlugins.values());
     }
 
+    /**
+     * Closes all loaded plugins and removes them from the registry.
+     * Each plugin is closed before the registry is cleared.
+     */
+    public void closeAll() {
+        loadedPlugins.values().forEach(this::close);
+        loadedPlugins.clear();
+    }
 
     /**
      * Returns the number of plugins currently stored in the registry.

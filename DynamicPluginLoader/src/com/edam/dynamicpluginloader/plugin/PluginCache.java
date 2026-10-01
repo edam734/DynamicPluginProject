@@ -26,4 +26,10 @@ public class PluginCache {
         System.out.println("COPY END");
         return target;
     }
+
+    public void delete(Path origin) throws IOException {
+        Path target = cachePath.resolve(origin.getFileName());
+        Files.delete(target);
+
+    }
 }

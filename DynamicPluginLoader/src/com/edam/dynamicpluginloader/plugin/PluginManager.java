@@ -44,13 +44,7 @@ public class PluginManager {
     }
 
     public void updatePlugin(Path jarPath) {
-        pluginExecutor.submit(() -> {
-            try {
-                doUpdatePlugin(jarPath);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        pluginExecutor.submit(() -> doUpdatePlugin(jarPath));
     }
 
     private void doUpdatePlugin(Path jarPath) {
@@ -67,10 +61,10 @@ public class PluginManager {
         }
     }
 
-    public void removePlugin(Path jarPath) {
-        boolean exists = Files.exists(jarPath);
-        if (!exists) {
+    public void removePlugin(Path jarPath) throws IOException {
+        if (!Files.exists(jarPath)) {
             pluginRegistry.remove(jarPath);
+            pluginCache.delete(jarPath);
         }
     }
 
